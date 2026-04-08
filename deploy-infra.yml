@@ -1,0 +1,49 @@
+name: CI-CD Terraform AWS
+on:
+  push:
+    branches:
+      - main # Le robot se lance uniquement quand on push sur main
+
+jobs:
+  # ÉTAPE 1 : Le Scan de Sécurité
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: terraform
+          # On permet au pipeline de continuer même s'il y a des erreurs de scan
+          # pour que tu puisses voir le déploiement
+          soft_fail: true 
+
+  # ÉTAPE 2 : Le Déploiement
+  deploy-aws:
+    needs: security-scan # On attend que le scan soit fini
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      # Installation de Terraform sur la machine GitHub
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      # Connexion à AWS avec tes Secrets
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-3
+
+      # Les 3 commandes magiques automatisées
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        run: terraform plan
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve # -auto-approve évite que le robot s'arrête pour demander "yes"
