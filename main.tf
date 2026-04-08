@@ -132,3 +132,4 @@ output "public_ip" {
   description = "Adresse IP publique du serveur"
   value       = aws_instance.web_server.public_ip
 }
+resource "aws_instance" "web_server" { ... }
