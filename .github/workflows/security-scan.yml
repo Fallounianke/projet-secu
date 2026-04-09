@@ -2,6 +2,7 @@ name: Security Scan
 on: [push]
 
 jobs:
+  # JOB 1 : SCAN DE SÉCURITÉ
   checkov-job:
     runs-on: ubuntu-latest
     steps:
@@ -11,3 +12,27 @@ jobs:
         with:
           directory: .
           framework: terraform
+          soft_fail: true # Permet de passer au déploiement même s'il y a des alertes
+
+  # JOB 2 : DÉPLOIEMENT AUTOMATIQUE
+  deploy-aws:
+    needs: checkov-job # Ce job attend que le scan soit fini
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-3
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
